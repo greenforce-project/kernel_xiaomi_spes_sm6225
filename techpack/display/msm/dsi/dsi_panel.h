@@ -51,6 +51,13 @@ enum dsi_backlight_type {
 	DSI_BACKLIGHT_MAX,
 };
 
+#ifdef CONFIG_TARGET_PROJECT_K7T
+enum dsi_doze_mode_type {
+	DSI_DOZE_LPM = 0,
+	DSI_DOZE_HBM,
+};
+#endif
+
 enum bl_update_flag {
 	BL_UPDATE_DELAY_UNTIL_FIRST_FRAME,
 	BL_UPDATE_NONE,
@@ -230,6 +237,8 @@ struct dsi_panel {
 	enum dsi_panel_physical_type panel_type;
 	int hbm_mode;
 	u32 dsi_refresh_flag;
+        bool doze_enabled;
+        enum dsi_doze_mode_type doze_mode;
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
@@ -352,6 +361,10 @@ void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 
 void dsi_set_backlight_control(struct dsi_panel *panel,
 			 struct dsi_display_mode *adj_mode);
+
+int dsi_panel_set_doze_status(struct dsi_panel *panel, bool status);
+
+int dsi_panel_set_doze_mode(struct dsi_panel *panel, enum dsi_doze_mode_type mode);
 
 int dsi_panel_apply_hbm_mode(struct dsi_panel *panel);
 
