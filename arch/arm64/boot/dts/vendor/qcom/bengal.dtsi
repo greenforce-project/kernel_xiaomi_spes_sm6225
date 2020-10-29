@@ -439,7 +439,7 @@
 	};
 
 	chosen {
-		bootargs = "nodebugmon rcupdate.rcu_expedited=1 rcu_nocbs=0-7 kpti=off";
+		bootargs = "nodebugmon rcupdate.rcu_expedited=1 rcu_nocbs=0-7 rcupdate.rcu_normal_after_boot=1 kpti=off";
 	};
 
 	soc: soc { };
