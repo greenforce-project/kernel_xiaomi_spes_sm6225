@@ -314,6 +314,12 @@ config BROKEN_GAS_INST
 
 source "arch/arm64/Kconfig.platforms"
 
+config TARGET_PROJECT_K7T
+        default n
+        bool "Custom project for hardware K7T pcb"
+        help
+        Custom project for K7T pcb.
+
 menu "Bus support"
 
 config PCI
@@ -1720,6 +1726,13 @@ config KRYO_PMU_WORKAROUND
 	  overflow interrupts from multiple monitors.
 
 	  Enable this flag for effect SoCs.
+
+config BOOT_INFO
+	bool "Boot information from bootloader"
+	default y
+	help
+	  On embedded linux device, we try to collect more information from
+	  bootloader to kernel. eg. powerup reason.
 
 config BUILD_ARM64_DT_OVERLAY
 	bool "enable DT overlay compilation support"
