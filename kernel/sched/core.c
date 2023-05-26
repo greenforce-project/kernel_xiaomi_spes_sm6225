@@ -9576,7 +9576,7 @@ void migrate_disable(void)
 #endif
 	}
 
-	preempt_enable();
+	preempt_enable_no_resched();
 }
 EXPORT_SYMBOL(migrate_disable);
 
