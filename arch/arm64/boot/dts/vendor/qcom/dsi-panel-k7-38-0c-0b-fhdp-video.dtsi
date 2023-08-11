@@ -45,6 +45,7 @@ dsi_k7_38_0c_0b_video:
 		qcom,mdss-dsi-te-dcs-command = <1>;
 		qcom,mdss-dsi-te-check-enable;
 		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-qsync-min-refresh-rate = <60>;
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
 		qcom,dsi-supported-dfps-list = <90 60>;
