@@ -146,7 +146,6 @@ endif
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
         dtbo-$(CONFIG_ARCH_BENGAL) += \
                 bengal-rumi-overlay.dtbo \
-                bengal-qrd-overlay.dtbo \
                 bengal-idp-overlay.dtbo \
                 bengal-idp-nopmi-overlay.dtbo \
                 bengal-idp-usbc-overlay.dtbo \
@@ -276,7 +275,10 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		khajeq-idp-nopmi-overlay.dtbo \
 		khajeq-idp-usbc-overlay.dtbo \
 		khajeq-idp-pm8010-overlay.dtbo \
-		khajeq-idps-display-90hz-overlay.dtbo
+		khajeq-idps-display-90hz-overlay.dtbo \
+		spes-khaje-idp-nopmi-overlay.dtbo \
+		spesn-khaje-idp-nopmi-overlay.dtbo \
+		spes-sm5602-khaje-idp-nopmi-overlay.dtbo
 
 khaje-atp-overlay.dtbo-base := khaje.dtb
 khaje-idp-overlay.dtbo-base := khaje.dtb
@@ -308,6 +310,9 @@ khajeq-idp-overlay.dtbo-base := khajeq.dtb
 khajeq-idp-nopmi-overlay.dtbo-base := khajeq.dtb
 khajeq-idp-pm8010-overlay.dtbo-base := khajeq.dtb
 khajeq-idp-usbc-overlay.dtbo-base := khajeq.dtb
+spes-khaje-idp-nopmi-overlay.dtbo-base := khaje.dtb
+spesn-khaje-idp-nopmi-overlay.dtbo-base := khaje.dtb
+spes-sm5602-khaje-idp-nopmi-overlay.dtbo-base := khaje.dtb
 else
 dtb-$(CONFIG_ARCH_KHAJE) += khaje-idp.dtb \
 		khaje-qrd.dtb \
