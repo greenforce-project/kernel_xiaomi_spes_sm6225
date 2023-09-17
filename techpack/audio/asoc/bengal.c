@@ -585,15 +585,9 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
 /*import xiaomi headset patch begin */
-#if defined(CONFIG_XIAOMI_AUDIO_MBHC)
 	.key_code[1] = BTN_1,
 	.key_code[2] = BTN_2,
 	.key_code[3] = 0,
-#else
-	.key_code[1] = KEY_VOICECOMMAND,
-	.key_code[2] = KEY_VOLUMEUP,
-	.key_code[3] = KEY_VOLUMEDOWN,
-#endif
 /*import xiaomi headset patch end */
 	.key_code[4] = 0,
 	.key_code[5] = 0,
@@ -4571,13 +4565,8 @@ static void *def_wcd_mbhc_cal(void)
 
 	btn_high[0] = 75;
 /*import xiaomi headset patch begin */
-#if defined(CONFIG_XIAOMI_AUDIO_MBHC)
 	btn_high[1] = 225;
 	btn_high[2] = 450;
-#else
-	btn_high[1] = 150;
-	btn_high[2] = 237;
-#endif
 /*import xiaomi headset patch end */
 	btn_high[3] = 500;
 	btn_high[4] = 500;
