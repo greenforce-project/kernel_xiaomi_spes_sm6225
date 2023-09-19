@@ -51,12 +51,10 @@ enum dsi_backlight_type {
 	DSI_BACKLIGHT_MAX,
 };
 
-#ifdef CONFIG_TARGET_PROJECT_K7T
 enum dsi_doze_mode_type {
 	DSI_DOZE_LPM = 0,
 	DSI_DOZE_HBM,
 };
-#endif
 
 enum bl_update_flag {
 	BL_UPDATE_DELAY_UNTIL_FIRST_FRAME,
