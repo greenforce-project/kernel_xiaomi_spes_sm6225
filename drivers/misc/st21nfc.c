@@ -31,7 +31,6 @@
 #include <linux/workqueue.h>
 #include <linux/acpi.h>
 #include <linux/gpio/consumer.h>
-#include <net/nfc/nci.h>
 #include <linux/clk.h>
 #else
 #include <linux/gpio.h>
