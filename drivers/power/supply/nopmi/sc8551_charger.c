@@ -25,7 +25,6 @@
 #include <linux/debugfs.h>
 #include <linux/bitops.h>
 #include <linux/math64.h>
-#include <asm/neon.h>
 #include "sc8551_reg.h"
 
 
@@ -42,7 +41,7 @@ typedef enum {
 	ADC_MAX_NUM,
 }ADC_CH;
 
-static float sc8551_adc_lsb[] = {
+static int sc8551_adc_lsb[] = {
 	[ADC_IBUS]	= SC8551_IBUS_ADC_LSB,
 	[ADC_VBUS]	= SC8551_VBUS_ADC_LSB,
 	[ADC_VAC]	= SC8551_VAC_ADC_LSB,
@@ -996,9 +995,7 @@ static int sc8551_get_adc_data(struct sc8551 *sc, int channel,  int *result)
 	*result = val;
 
 	if (sc->chip_vendor == SC8551) {
-		kernel_neon_begin();
-		*result = (int)(val * sc8551_adc_lsb[channel]);
-		kernel_neon_end();
+		*result = (u64)val * (u64)sc8551_adc_lsb[channel] / 10000000;
 	}
 	return 0;
 }
