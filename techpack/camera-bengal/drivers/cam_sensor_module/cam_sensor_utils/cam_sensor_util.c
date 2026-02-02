@@ -1133,12 +1133,17 @@ int cam_sensor_util_request_gpio_table(
 					gpio_tbl[i].flags, gpio_tbl[i].label);
 			if (rc) {
 				/*
-				 * After GPIO request fails, contine to
-				 * apply new gpios, outout a error message
-				 * for driver bringup debug
+				 * GPIO 1233 (CUSTOM_GPIO1) is shared between
+				 * multiple sensors. Ignore request failure
+				 * as it may already be requested by another
+				 * sensor using the same GPIO.
 				 */
-				CAM_ERR(CAM_SENSOR, "gpio %d:%s request fails",
-					gpio_tbl[i].gpio, gpio_tbl[i].label);
+				if (gpio_tbl[i].gpio == 1233) {
+					rc = 0;
+				} else {
+					CAM_ERR(CAM_SENSOR, "gpio %d:%s request fails",
+						gpio_tbl[i].gpio, gpio_tbl[i].label);
+				}
 			}
 		}
 	} else {
@@ -2002,10 +2007,6 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 		case SENSOR_STANDBY:
 		case SENSOR_CUSTOM_GPIO1:
 		case SENSOR_CUSTOM_GPIO2:
-			if (no_gpio) {
-				CAM_ERR(CAM_SENSOR, "request gpio failed");
-				goto power_up_failed;
-			}
 			if (!gpio_num_info) {
 				CAM_ERR(CAM_SENSOR, "Invalid gpio_num_info");
 				goto power_up_failed;
