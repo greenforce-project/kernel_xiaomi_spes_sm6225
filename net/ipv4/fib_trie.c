@@ -1468,19 +1468,17 @@ found:
 		if (fi->fib_flags & RTNH_F_DEAD)
 			continue;
 		for (nhsel = 0; nhsel < fi->fib_nhs; nhsel++) {
-			const struct fib_nh *nh = &fi->fib_nh[nhsel];
-			struct in_device *in_dev = __in_dev_get_rcu(nh->nh_dev);
+			struct fib_nh_common *nhc = fib_info_nhc(fi, nhsel);
 
-			if (nh->nh_flags & RTNH_F_DEAD)
+			if (nhc->nhc_flags & RTNH_F_DEAD)
 				continue;
-			if (in_dev &&
-			    IN_DEV_IGNORE_ROUTES_WITH_LINKDOWN(in_dev) &&
-			    nh->nh_flags & RTNH_F_LINKDOWN &&
+			if (ip_ignore_linkdown(nhc->nhc_dev) &&
+			    nhc->nhc_flags & RTNH_F_LINKDOWN &&
 			    !(fib_flags & FIB_LOOKUP_IGNORE_LINKSTATE))
 				continue;
 			if (!(flp->flowi4_flags & FLOWI_FLAG_SKIP_NH_OIF)) {
 				if (flp->flowi4_oif &&
-				    flp->flowi4_oif != nh->nh_oif)
+				    flp->flowi4_oif != nhc->nhc_oif)
 					continue;
 			}
 
@@ -1490,6 +1488,7 @@ found:
 			res->prefix = htonl(n->key);
 			res->prefixlen = KEYLENGTH - fa->fa_slen;
 			res->nh_sel = nhsel;
+			res->nhc = nhc;
 			res->type = fa->fa_type;
 			res->scope = fi->fib_scope;
 			res->fi = fi;
@@ -1498,7 +1497,7 @@ found:
 #ifdef CONFIG_IP_FIB_TRIE_STATS
 			this_cpu_inc(stats->semantic_match_passed);
 #endif
-			trace_fib_table_lookup(tb->tb_id, flp, nh, err);
+			trace_fib_table_lookup(tb->tb_id, flp, nhc, err);
 
 			return err;
 		}
@@ -1911,10 +1910,11 @@ int fib_table_flush(struct net *net, struct fib_table *tb, bool flush_all)
 				continue;
 			}
 
-			/* Do not flush error routes if network namespace is
-			 * not being dismantled
+			/* When not flushing the entire table, skip error
+			 * routes that are not marked for deletion.
 			 */
-			if (!flush_all && fib_props[fa->fa_type].error) {
+			if (!flush_all && fib_props[fa->fa_type].error &&
+			    !(fi->fib_flags & RTNH_F_DEAD)) {
 				slen = fa->fa_slen;
 				continue;
 			}
@@ -2639,7 +2639,7 @@ static unsigned int fib_flag_trans(int type, __be32 mask, const struct fib_info 
 
 	if (type == RTN_UNREACHABLE || type == RTN_PROHIBIT)
 		flags = RTF_REJECT;
-	if (fi && fi->fib_nh->nh_gw)
+	if (fi && fi->fib_nh->fib_nh_gw4)
 		flags |= RTF_GATEWAY;
 	if (mask == htonl(0xFFFFFFFF))
 		flags |= RTF_HOST;
@@ -2690,7 +2690,7 @@ static int fib_route_seq_show(struct seq_file *seq, void *v)
 				   "%d\t%08X\t%d\t%u\t%u",
 				   fi->fib_dev ? fi->fib_dev->name : "*",
 				   prefix,
-				   fi->fib_nh->nh_gw, flags, 0, 0,
+				   fi->fib_nh->fib_nh_gw4, flags, 0, 0,
 				   fi->fib_priority,
 				   mask,
 				   (fi->fib_advmss ?

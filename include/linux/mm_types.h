@@ -3,7 +3,6 @@
 #define _LINUX_MM_TYPES_H
 
 #include <linux/mm_types_task.h>
-#include <linux/sched.h>
 
 #include <linux/auxvec.h>
 #include <linux/list.h>
@@ -15,8 +14,6 @@
 #include <linux/uprobes.h>
 #include <linux/page-flags-layout.h>
 #include <linux/workqueue.h>
-#include <linux/nodemask.h>
-#include <linux/mmdebug.h>
 #include <linux/android_kabi.h>
 
 #include <asm/mmu.h>
@@ -26,7 +23,6 @@
 #endif
 #define AT_VECTOR_SIZE (2*(AT_VECTOR_SIZE_ARCH + AT_VECTOR_SIZE_BASE + 1))
 
-typedef int vm_fault_t;
 
 struct address_space;
 struct mem_cgroup;
@@ -98,6 +94,13 @@ struct page {
 			 * Indicates order in the buddy system if PageBuddy.
 			 */
 			unsigned long private;
+		};
+		struct {	/* page_pool used by netstack */
+			/**
+			 * @dma_addr: might require a 64-bit value even on
+			 * 32-bit architectures.
+			 */
+			dma_addr_t dma_addr;
 		};
 		struct {	/* slab, slob and slub */
 			union {
@@ -339,10 +342,6 @@ struct vm_area_struct {
 	struct mempolicy *vm_policy;	/* NUMA policy for the VMA */
 #endif
 	struct vm_userfaultfd_ctx vm_userfaultfd_ctx;
-#ifdef CONFIG_SPECULATIVE_PAGE_FAULT
-	seqcount_t vm_sequence;		/* Speculative page fault field */
-	atomic_t vm_ref_count;		/* see vma_get(), vma_put() */
-#endif
 
 	ANDROID_KABI_RESERVE(1);
 	ANDROID_KABI_RESERVE(2);
@@ -367,9 +366,6 @@ struct mm_struct {
 		struct vm_area_struct *mmap;		/* list of VMAs */
 		struct rb_root mm_rb;
 		u64 vmacache_seqnum;                   /* per-thread vmacache */
-#ifdef CONFIG_SPECULATIVE_PAGE_FAULT
-		rwlock_t mm_rb_lock;	/* Speculative page fault field */
-#endif
 #ifdef CONFIG_MMU
 		unsigned long (*get_unmapped_area) (struct file *filp,
 				unsigned long addr, unsigned long len,
@@ -519,23 +515,6 @@ struct mm_struct {
 		/* HMM needs to track a few things per mm */
 		struct hmm *hmm;
 #endif
-
-#ifdef CONFIG_LRU_GEN
-		struct {
-			/* this mm_struct is on lru_gen_mm_list */
-			struct list_head list;
-#ifdef CONFIG_MEMCG
-			/* points to the memcg of "owner" above */
-			struct mem_cgroup *memcg;
-#endif
-			/*
-			 * Set when switching to this mm_struct, as a hint of
-			 * whether it has been used since the last time per-node
-			 * page table walkers cleared the corresponding bits.
-			 */
-			nodemask_t nodes;
-		} lru_gen;
-#endif /* CONFIG_LRU_GEN */
 	} __randomize_layout;
 
 	/*
@@ -561,65 +540,6 @@ static inline cpumask_t *mm_cpumask(struct mm_struct *mm)
 {
 	return (struct cpumask *)&mm->cpu_bitmap;
 }
-
-#ifdef CONFIG_LRU_GEN
-
-struct lru_gen_mm_list {
-	/* mm_struct list for page table walkers */
-	struct list_head fifo;
-	/* protects the list above */
-	spinlock_t lock;
-};
-
-void lru_gen_add_mm(struct mm_struct *mm);
-void lru_gen_del_mm(struct mm_struct *mm);
-#ifdef CONFIG_MEMCG
-void lru_gen_migrate_mm(struct mm_struct *mm);
-#endif
-
-static inline void lru_gen_init_mm(struct mm_struct *mm)
-{
-	INIT_LIST_HEAD(&mm->lru_gen.list);
-#ifdef CONFIG_MEMCG
-	mm->lru_gen.memcg = NULL;
-#endif
-	nodes_clear(mm->lru_gen.nodes);
-}
-
-static inline void lru_gen_use_mm(struct mm_struct *mm)
-{
-	/* unlikely but not a bug when racing with lru_gen_migrate_mm() */
-	VM_WARN_ON(list_empty(&mm->lru_gen.list));
-
-	if (!(current->flags & PF_KTHREAD) && !nodes_full(mm->lru_gen.nodes))
-		nodes_setall(mm->lru_gen.nodes);
-}
-
-#else /* !CONFIG_LRU_GEN */
-
-static inline void lru_gen_add_mm(struct mm_struct *mm)
-{
-}
-
-static inline void lru_gen_del_mm(struct mm_struct *mm)
-{
-}
-
-#ifdef CONFIG_MEMCG
-static inline void lru_gen_migrate_mm(struct mm_struct *mm)
-{
-}
-#endif
-
-static inline void lru_gen_init_mm(struct mm_struct *mm)
-{
-}
-
-static inline void lru_gen_use_mm(struct mm_struct *mm)
-{
-}
-
-#endif /* CONFIG_LRU_GEN */
 
 struct mmu_gather;
 extern void tlb_gather_mmu(struct mmu_gather *tlb, struct mm_struct *mm,
@@ -712,6 +632,78 @@ static inline bool mm_tlb_flush_nested(struct mm_struct *mm)
 }
 
 struct vm_fault;
+
+/**
+ * typedef vm_fault_t - Return type for page fault handlers.
+ *
+ * Page fault handlers return a bitmask of %VM_FAULT values.
+ */
+typedef __bitwise unsigned int vm_fault_t;
+
+/**
+ * enum vm_fault_reason - Page fault handlers return a bitmask of
+ * these values to tell the core VM what happened when handling the
+ * fault. Used to decide whether a process gets delivered SIGBUS or
+ * just gets major/minor fault counters bumped up.
+ *
+ * @VM_FAULT_OOM:		Out Of Memory
+ * @VM_FAULT_SIGBUS:		Bad access
+ * @VM_FAULT_MAJOR:		Page read from storage
+ * @VM_FAULT_WRITE:		Special case for get_user_pages
+ * @VM_FAULT_HWPOISON:		Hit poisoned small page
+ * @VM_FAULT_HWPOISON_LARGE:	Hit poisoned large page. Index encoded
+ *				in upper bits
+ * @VM_FAULT_SIGSEGV:		segmentation fault
+ * @VM_FAULT_NOPAGE:		->fault installed the pte, not return page
+ * @VM_FAULT_LOCKED:		->fault locked the returned page
+ * @VM_FAULT_RETRY:		->fault blocked, must retry
+ * @VM_FAULT_FALLBACK:		huge page fault failed, fall back to small
+ * @VM_FAULT_DONE_COW:		->fault has fully handled COW
+ * @VM_FAULT_NEEDDSYNC:		->fault did not modify page tables and needs
+ *				fsync() to complete (for synchronous page faults
+ *				in DAX)
+ * @VM_FAULT_HINDEX_MASK:	mask HINDEX value
+ *
+ */
+enum vm_fault_reason {
+	VM_FAULT_OOM            = (__force vm_fault_t)0x000001,
+	VM_FAULT_SIGBUS         = (__force vm_fault_t)0x000002,
+	VM_FAULT_MAJOR          = (__force vm_fault_t)0x000004,
+	VM_FAULT_WRITE          = (__force vm_fault_t)0x000008,
+	VM_FAULT_HWPOISON       = (__force vm_fault_t)0x000010,
+	VM_FAULT_HWPOISON_LARGE = (__force vm_fault_t)0x000020,
+	VM_FAULT_SIGSEGV        = (__force vm_fault_t)0x000040,
+	VM_FAULT_NOPAGE         = (__force vm_fault_t)0x000100,
+	VM_FAULT_LOCKED         = (__force vm_fault_t)0x000200,
+	VM_FAULT_RETRY          = (__force vm_fault_t)0x000400,
+	VM_FAULT_FALLBACK       = (__force vm_fault_t)0x000800,
+	VM_FAULT_DONE_COW       = (__force vm_fault_t)0x001000,
+	VM_FAULT_NEEDDSYNC      = (__force vm_fault_t)0x002000,
+	VM_FAULT_HINDEX_MASK    = (__force vm_fault_t)0x0f0000,
+};
+
+/* Encode hstate index for a hwpoisoned large page */
+#define VM_FAULT_SET_HINDEX(x) ((__force vm_fault_t)((x) << 16))
+#define VM_FAULT_GET_HINDEX(x) (((x) >> 16) & 0xf)
+
+#define VM_FAULT_ERROR (VM_FAULT_OOM | VM_FAULT_SIGBUS |	\
+			VM_FAULT_SIGSEGV | VM_FAULT_HWPOISON |	\
+			VM_FAULT_HWPOISON_LARGE | VM_FAULT_FALLBACK)
+
+#define VM_FAULT_RESULT_TRACE \
+	{ VM_FAULT_OOM,                 "OOM" },	\
+	{ VM_FAULT_SIGBUS,              "SIGBUS" },	\
+	{ VM_FAULT_MAJOR,               "MAJOR" },	\
+	{ VM_FAULT_WRITE,               "WRITE" },	\
+	{ VM_FAULT_HWPOISON,            "HWPOISON" },	\
+	{ VM_FAULT_HWPOISON_LARGE,      "HWPOISON_LARGE" },	\
+	{ VM_FAULT_SIGSEGV,             "SIGSEGV" },	\
+	{ VM_FAULT_NOPAGE,              "NOPAGE" },	\
+	{ VM_FAULT_LOCKED,              "LOCKED" },	\
+	{ VM_FAULT_RETRY,               "RETRY" },	\
+	{ VM_FAULT_FALLBACK,            "FALLBACK" },	\
+	{ VM_FAULT_DONE_COW,            "DONE_COW" },	\
+	{ VM_FAULT_NEEDDSYNC,           "NEEDDSYNC" }
 
 struct vm_special_mapping {
 	const char *name;	/* The name, e.g. "[vdso]". */
