@@ -22,7 +22,7 @@
 #if IS_ENABLED(CONFIG_IPV6)
 #include <net/ipv6.h>
 #endif
-#include <net/addrconf.h>
+#include <net/ipv6_stubs.h>
 #include <net/nexthop.h>
 #include "internal.h"
 
@@ -81,8 +81,8 @@ static struct mpls_route *mpls_route_input_rcu(struct net *net, unsigned index)
 
 	if (index < net->mpls.platform_labels) {
 		struct mpls_route __rcu **platform_label =
-			rcu_dereference(net->mpls.platform_label);
-		rt = rcu_dereference(platform_label[index]);
+			rcu_dereference_rtnl(net->mpls.platform_label);
+		rt = rcu_dereference_rtnl(platform_label[index]);
 	}
 	return rt;
 }
@@ -1309,8 +1309,7 @@ done:
 	(&((struct mpls_dev *)0)->field)
 
 static int mpls_conf_proc(struct ctl_table *ctl, int write,
-			  void __user *buffer,
-			  size_t *lenp, loff_t *ppos)
+			  void *buffer, size_t *lenp, loff_t *ppos)
 {
 	int oval = *(int *)ctl->data;
 	int ret = proc_dointvec(ctl, write, buffer, lenp, ppos);
@@ -2057,14 +2056,61 @@ nla_put_failure:
 	return -EMSGSIZE;
 }
 
+#if IS_ENABLED(CONFIG_INET)
+static int mpls_valid_fib_dump_req(struct net *net, const struct nlmsghdr *nlh,
+				   struct fib_dump_filter *filter,
+				   struct netlink_callback *cb)
+{
+	return ip_valid_fib_dump_req(net, nlh, filter, cb);
+}
+#else
+static int mpls_valid_fib_dump_req(struct net *net, const struct nlmsghdr *nlh,
+				   struct fib_dump_filter *filter,
+				   struct netlink_callback *cb)
+{
+	struct netlink_ext_ack *extack = cb->extack;
+	struct rtmsg *rtm;
+
+	if (nlh->nlmsg_len < nlmsg_msg_size(sizeof(*rtm))) {
+		NL_SET_ERR_MSG_MOD(extack, "Invalid header for FIB dump request");
+		return -EINVAL;
+	}
+
+	rtm = nlmsg_data(nlh);
+	if (rtm->rtm_dst_len || rtm->rtm_src_len  || rtm->rtm_tos   ||
+	    rtm->rtm_table   || rtm->rtm_protocol || rtm->rtm_scope ||
+	    rtm->rtm_type    || rtm->rtm_flags) {
+		NL_SET_ERR_MSG_MOD(extack, "Invalid values in header for FIB dump request");
+		return -EINVAL;
+	}
+
+	if (nlmsg_attrlen(nlh, sizeof(*rtm))) {
+		NL_SET_ERR_MSG_MOD(extack, "Invalid data after header in FIB dump request");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+#endif
+
 static int mpls_dump_routes(struct sk_buff *skb, struct netlink_callback *cb)
 {
+	const struct nlmsghdr *nlh = cb->nlh;
 	struct net *net = sock_net(skb->sk);
 	struct mpls_route __rcu **platform_label;
+	struct fib_dump_filter filter = {};
 	size_t platform_labels;
 	unsigned int index;
 
 	ASSERT_RTNL();
+
+	if (cb->strict_check) {
+		int err;
+
+		err = mpls_valid_fib_dump_req(net, nlh, &filter, cb);
+		if (err < 0)
+			return err;
+	}
 
 	index = cb->args[0];
 	if (index < MPLS_LABEL_FIRST_UNRESERVED)
@@ -2414,7 +2460,7 @@ nolabels:
 }
 
 static int mpls_platform_labels(struct ctl_table *table, int write,
-				void __user *buffer, size_t *lenp, loff_t *ppos)
+				void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net = table->data;
 	int platform_labels = net->mpls.platform_labels;

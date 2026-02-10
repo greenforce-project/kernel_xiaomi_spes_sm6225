@@ -783,6 +783,9 @@ static int create_snapshot(struct btrfs_root *root, struct inode *dir,
 	if (!test_bit(BTRFS_ROOT_REF_COWS, &root->state))
 		return -EINVAL;
 
+	if (btrfs_root_refs(&root->root_item) == 0)
+		return -ENOENT;
+
 	pending_snapshot = kzalloc(sizeof(*pending_snapshot), GFP_KERNEL);
 	if (!pending_snapshot)
 		return -ENOMEM;
@@ -2121,7 +2124,7 @@ static noinline int copy_to_sk(struct btrfs_path *path,
 		 * problem. Otherwise we'll fault and then copy the buffer in
 		 * properly this next time through
 		 */
-		if (probe_user_write(ubuf + *sk_offset, &sh, sizeof(sh))) {
+		if (copy_to_user_nofault(ubuf + *sk_offset, &sh, sizeof(sh))) {
 			ret = 0;
 			goto out;
 		}

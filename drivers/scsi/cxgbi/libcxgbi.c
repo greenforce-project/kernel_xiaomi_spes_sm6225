@@ -790,7 +790,7 @@ cxgbi_check_route6(struct sockaddr *dst_addr, int ifindex)
 	csk->mtu = mtu;
 	csk->dst = dst;
 
-	if (ipv6_addr_any(&rt->rt6i_prefsrc.addr)) {
+	if (!rt->from || ipv6_addr_any(&rt->from->fib6_prefsrc.addr)) {
 		struct inet6_dev *idev = ip6_dst_idev((struct dst_entry *)rt);
 
 		err = ipv6_dev_get_saddr(&init_net, idev ? idev->dev : NULL,
@@ -801,7 +801,7 @@ cxgbi_check_route6(struct sockaddr *dst_addr, int ifindex)
 			goto rel_rt;
 		}
 	} else {
-		pref_saddr = rt->rt6i_prefsrc.addr;
+		pref_saddr = rt->from->fib6_prefsrc.addr;
 	}
 
 	csk->csk_family = AF_INET6;
@@ -2774,7 +2774,7 @@ static int __init libcxgbi_init_module(void)
 {
 	pr_info("%s", version);
 
-	BUILD_BUG_ON(FIELD_SIZEOF(struct sk_buff, cb) <
+	BUILD_BUG_ON(sizeof_field(struct sk_buff, cb) <
 		     sizeof(struct cxgbi_skb_cb));
 	return 0;
 }
