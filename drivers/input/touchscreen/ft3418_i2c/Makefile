@@ -1,5 +1,5 @@
 # Makefile for the focaltech touchscreen drivers.
-
+ccflags-y += $(DISABLE_LTO_CLANG) $(DISABLE_CFI_CLANG) -fno-data-sections -fno-function-sections
 
 obj-$(CONFIG_TOUCHSCREEN_FTS)	+=  focaltech_core.o
 obj-$(CONFIG_TOUCHSCREEN_FTS)	+=  focaltech_ex_fun.o

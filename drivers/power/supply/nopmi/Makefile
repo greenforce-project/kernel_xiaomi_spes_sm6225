@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 ccflags-$(CONFIG_TCPC_CLASS) += -I../../../usb/typec/tcpc/inc
+ccflags-y += $(DISABLE_LTO_CLANG) $(DISABLE_CFI_CLANG) -fno-data-sections -fno-function-sections
 
 obj-$(CONFIG_BQ2589X_CHARGER)	+= bq2589x_charger.o
 obj-$(CONFIG_CHARGER_SC8551)	+= sc8551_charger.o
