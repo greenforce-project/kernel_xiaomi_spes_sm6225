@@ -257,11 +257,6 @@ rmnet_perf_config_register_callbacks(struct net_device *dev,
 				&rmnet_perf_core_handle_map_control_start_v2;
 			dl_ind->dl_trl_handler_v2 =
 				&rmnet_perf_core_handle_map_control_end_v2;
-		} else {
-			dl_ind->dl_hdr_handler =
-				&rmnet_perf_core_handle_map_control_start;
-			dl_ind->dl_trl_handler =
-				&rmnet_perf_core_handle_map_control_end;
 		}
 
 		if (rmnet_map_dl_ind_register(port, dl_ind)) {
@@ -373,7 +368,8 @@ rmnet_perf_dereg_callbacks(struct net_device *dev,
 
 static bool rmnet_perf_config_hook_registered(void)
 {
-	int (*deag_entry)(struct sk_buff *skb);
+	int (*deag_entry)(struct sk_buff *skb,
+			  struct rmnet_port *port);
 	void (*frag_entry)(struct rmnet_frag_descriptor *frag_desc,
 			   struct rmnet_port *port);
 

@@ -6,5 +6,5 @@ config RMNET_SHS
 	bool "Rmnet SHS driver"
 	default n
 	depends on RMNET
-	---help---
+	help
 	  performance mode of rmnet driver
