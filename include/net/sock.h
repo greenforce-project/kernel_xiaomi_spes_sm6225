@@ -64,6 +64,7 @@
 #include <linux/filter.h>
 #include <linux/rculist_nulls.h>
 #include <linux/poll.h>
+#include <linux/sockptr.h>
 
 #include <linux/atomic.h>
 #include <linux/refcount.h>
@@ -217,7 +218,7 @@ struct sock_common {
 		struct hlist_nulls_node skc_nulls_node;
 	};
 	unsigned short		skc_tx_queue_mapping;
-#ifdef CONFIG_XPS
+#ifdef CONFIG_SOCK_RX_QUEUE_MAPPING
 	unsigned short		skc_rx_queue_mapping;
 #endif
 	union {
@@ -339,7 +340,7 @@ struct sock {
 #define sk_nulls_node		__sk_common.skc_nulls_node
 #define sk_refcnt		__sk_common.skc_refcnt
 #define sk_tx_queue_mapping	__sk_common.skc_tx_queue_mapping
-#ifdef CONFIG_XPS
+#ifdef CONFIG_SOCK_RX_QUEUE_MAPPING
 #define sk_rx_queue_mapping	__sk_common.skc_rx_queue_mapping
 #endif
 
@@ -1195,6 +1196,8 @@ struct proto {
 
 	int			(*backlog_rcv) (struct sock *sk,
 						struct sk_buff *skb);
+	bool			(*bpf_bypass_getsockopt)(int level,
+							 int optname);
 
 	void		(*release_cb)(struct sock *sk);
 
@@ -1501,7 +1504,7 @@ sk_rmem_schedule(struct sock *sk, struct sk_buff *skb, int size)
 {
 	if (!sk_has_account(sk))
 		return true;
-	return size<= sk->sk_forward_alloc ||
+	return size <= sk->sk_forward_alloc ||
 		__sk_mem_schedule(sk, size, SK_MEM_RECV) ||
 		skb_pfmemalloc(skb);
 }
@@ -1726,7 +1729,7 @@ void sock_pfree(struct sk_buff *skb);
 #endif
 
 int sock_setsockopt(struct socket *sock, int level, int op,
-		    char __user *optval, unsigned int optlen);
+		    sockptr_t optval, unsigned int optlen);
 
 int sock_getsockopt(struct socket *sock, int level, int op,
 		    char __user *optval, int __user *optlen);
@@ -1891,7 +1894,7 @@ static inline int sk_tx_queue_get(const struct sock *sk)
 
 static inline void sk_rx_queue_set(struct sock *sk, const struct sk_buff *skb)
 {
-#ifdef CONFIG_XPS
+#ifdef CONFIG_SOCK_RX_QUEUE_MAPPING
 	if (skb_rx_queue_recorded(skb)) {
 		u16 rx_queue = skb_get_rx_queue(skb);
 
@@ -1905,20 +1908,20 @@ static inline void sk_rx_queue_set(struct sock *sk, const struct sk_buff *skb)
 
 static inline void sk_rx_queue_clear(struct sock *sk)
 {
-#ifdef CONFIG_XPS
+#ifdef CONFIG_SOCK_RX_QUEUE_MAPPING
 	sk->sk_rx_queue_mapping = NO_QUEUE_MAPPING;
 #endif
 }
 
-#ifdef CONFIG_XPS
 static inline int sk_rx_queue_get(const struct sock *sk)
 {
+#ifdef CONFIG_SOCK_RX_QUEUE_MAPPING
 	if (sk && sk->sk_rx_queue_mapping != NO_QUEUE_MAPPING)
 		return sk->sk_rx_queue_mapping;
+#endif
 
 	return -1;
 }
-#endif
 
 static inline void sk_set_socket(struct sock *sk, struct socket *sock)
 {
@@ -2008,12 +2011,20 @@ sk_dst_get(struct sock *sk)
 
 static inline void dst_negative_advice(struct sock *sk)
 {
+	/* *** ANDROID FIXUP ***
+	 * See b/343727534 for more details why this typedef is needed here.
+	 * *** ANDROID FIXUP ***
+	 */
+	android_dst_ops_negative_advice_new_t negative_advice;
+
 	struct dst_entry *dst = __sk_dst_get(sk);
 
 	sk_rethink_txhash(sk);
 
-	if (dst && dst->ops->negative_advice)
-		dst->ops->negative_advice(sk, dst);
+	if (dst && dst->ops->negative_advice) {
+		negative_advice = (android_dst_ops_negative_advice_new_t)dst->ops->negative_advice;
+		negative_advice(sk, dst);
+	}
 }
 
 static inline void

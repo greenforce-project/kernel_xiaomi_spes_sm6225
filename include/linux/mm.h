@@ -373,6 +373,7 @@ extern pgprot_t protection_map[16];
 #define FAULT_FLAG_REMOTE			0x80
 #define FAULT_FLAG_INSTRUCTION  		0x100
 #define FAULT_FLAG_INTERRUPTIBLE		0x200
+#define FAULT_FLAG_PREFAULT_OLD			0x400
 
 /*
  * The default fault flags that should be used by most of the
@@ -810,6 +811,12 @@ static inline unsigned int compound_order(struct page *page)
 static inline void set_compound_order(struct page *page, unsigned int order)
 {
 	page[1].compound_order = order;
+}
+
+/* Returns the number of bytes in this potentially compound page. */
+static inline unsigned long page_size(struct page *page)
+{
+	return PAGE_SIZE << compound_order(page);
 }
 
 void free_compound_page(struct page *page);
@@ -2947,6 +2954,7 @@ void __init setup_nr_node_ids(void);
 static inline void setup_nr_node_ids(void) {}
 #endif
 
+extern int want_old_faultaround_pte;
 
 #ifdef CONFIG_PROCESS_RECLAIM
 struct reclaim_param {

@@ -444,6 +444,7 @@ struct address_space {
 	const struct address_space_operations *a_ops;	/* methods */
 	unsigned long		flags;		/* error bits */
 	spinlock_t		private_lock;	/* for use by the address_space */
+	struct rw_semaphore invalidate_lock;
 	gfp_t			gfp_mask;	/* implicit gfp mask for allocations */
 	struct list_head	private_list;	/* for use by the address_space */
 	void			*private_data;	/* ditto */
@@ -2926,6 +2927,14 @@ extern int notify_change2(struct vfsmount *, struct dentry *, struct iattr *, st
 extern int inode_permission(struct inode *, int);
 extern int inode_permission2(struct vfsmount *, struct inode *, int);
 extern int generic_permission(struct inode *, int);
+static inline int file_permission(struct file *file, int mask)
+{
+	return inode_permission(file_inode(file), mask);
+}
+static inline int path_permission(const struct path *path, int mask)
+{
+	return inode_permission(d_inode(path->dentry), mask);
+}
 extern int __check_sticky(struct inode *dir, struct inode *inode);
 
 static inline bool execute_ok(struct inode *inode)
