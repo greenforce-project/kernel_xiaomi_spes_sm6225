@@ -246,8 +246,8 @@ void __mmu_notifier_invalidate_range(struct mm_struct *mm,
 EXPORT_SYMBOL_GPL(__mmu_notifier_invalidate_range);
 
 /*
- * Must be called while holding mm->mmap_sem for either read or write.
- * The result is guaranteed to be valid until mm->mmap_sem is dropped.
+ * Must be called while holding mm->mmap_lock for either read or write.
+ * The result is guaranteed to be valid until mm->mmap_lock is dropped.
  */
 bool mm_has_blockable_invalidate_notifiers(struct mm_struct *mm)
 {

@@ -1926,7 +1926,7 @@ static void  mlx5_ib_vma_close(struct vm_area_struct *area)
 	 * closing flow. (e.g. mlx5 ib_dealloc_ucontext)
 	 * However need a sync with accessing the vma as part of
 	 * mlx5_ib_disassociate_ucontext.
-	 * The close operation is usually called under mm->mmap_sem except when
+	 * The close operation is usually called under mm->mmap_lock except when
 	 * process is exiting.
 	 * The exiting case is handled explicitly as part of
 	 * mlx5_ib_disassociate_ucontext.
