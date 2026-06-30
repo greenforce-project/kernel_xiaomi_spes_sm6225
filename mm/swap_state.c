@@ -383,7 +383,6 @@ struct page *__read_swap_cache_async(swp_entry_t entry, gfp_t gfp_mask,
 	struct page *found_page, *new_page = NULL;
 	struct address_space *swapper_space = swap_address_space(entry);
 	int err;
-	void *shadow;
 
 	*new_page_allocated = false;
 
@@ -452,10 +451,8 @@ struct page *__read_swap_cache_async(swp_entry_t entry, gfp_t gfp_mask,
 			/*
 			 * Initiate read into locked page and return.
 			 */
-			if (!lru_gen_enabled())
-				SetPageWorkingset(new_page);
-			else if (shadow)
-				lru_gen_refault(new_page, shadow);
+			SetPageWorkingset(new_page);
+
 			lru_cache_add_anon(new_page);
 			*new_page_allocated = true;
 			return new_page;
