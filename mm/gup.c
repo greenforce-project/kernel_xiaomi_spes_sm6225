@@ -879,7 +879,7 @@ static bool vma_permits_fault(struct vm_area_struct *vma,
  * succeed.
  *
  * This function will not return with an unlocked mmap_sem. So it has not the
- * same semantics wrt the @mm->mmap_sem as does filemap_fault().
+ * same semantics wrt the @mm->mmap_lock as does filemap_fault().
  */
 int fixup_user_fault(struct task_struct *tsk, struct mm_struct *mm,
 		     unsigned long address, unsigned int fault_flags,
@@ -1059,19 +1059,19 @@ retry:
  *
  * get_user_pages_locked() is suitable to replace the form:
  *
- *      down_read(&mm->mmap_sem);
+ *      down_read(&mm->mmap_lock);
  *      do_something()
  *      get_user_pages(tsk, mm, ..., pages, NULL);
- *      up_read(&mm->mmap_sem);
+ *      up_read(&mm->mmap_lock);
  *
  *  to:
  *
  *      int locked = 1;
- *      down_read(&mm->mmap_sem);
+ *      down_read(&mm->mmap_lock);
  *      do_something()
  *      get_user_pages_locked(tsk, mm, ..., pages, &locked);
  *      if (locked)
- *          up_read(&mm->mmap_sem);
+ *          up_read(&mm->mmap_lock);
  */
 long get_user_pages_locked(unsigned long start, unsigned long nr_pages,
 			   unsigned int gup_flags, struct page **pages,
@@ -1086,9 +1086,9 @@ EXPORT_SYMBOL(get_user_pages_locked);
 /*
  * get_user_pages_unlocked() is suitable to replace the form:
  *
- *      down_read(&mm->mmap_sem);
+ *      down_read(&mm->mmap_lock);
  *      get_user_pages(tsk, mm, ..., pages, NULL);
- *      up_read(&mm->mmap_sem);
+ *      up_read(&mm->mmap_lock);
  *
  *  with:
  *
@@ -1273,7 +1273,7 @@ EXPORT_SYMBOL(get_user_pages_longterm);
  *
  * return 0 on success, negative error code on error.
  *
- * vma->vm_mm->mmap_sem must be held.
+ * vma->vm_mm->mmap_lock must be held.
  *
  * If @locked is NULL, it may be held for read or write and will
  * be unperturbed.
@@ -1944,7 +1944,7 @@ int __get_user_pages_fast(unsigned long start, int nr_pages, int write,
  * @pages:	array that receives pointers to the pages pinned.
  *		Should be at least nr_pages long.
  *
- * Attempt to pin user pages in memory without taking mm->mmap_sem.
+ * Attempt to pin user pages in memory without taking mm->mmap_lock.
  * If not successful, it will fall back to taking the lock and
  * calling get_user_pages().
  *

@@ -1566,7 +1566,7 @@ out:
  * The page does not need to be reserved.
  *
  * Usually this function is called from f_op->mmap() handler
- * under mm->mmap_sem write-lock, so it can change vma->vm_flags.
+ * under mm->mmap_lock write-lock, so it can change vma->vm_flags.
  * Caller must set VM_MIXEDMAP on vma if it wants to call this
  * function from other places, for example from page-fault handler.
  */
@@ -2869,7 +2869,7 @@ static void lru_gen_swap_refault(struct page *page, swp_entry_t entry)
 	rcu_read_lock();
 	item = radix_tree_lookup(&mapping->i_pages, index);
 	rcu_read_unlock();
-	if (radix_tree_exceptional_entry(item))
+	if (xa_is_value(item))
 		lru_gen_refault(page, item);
 }
 #else

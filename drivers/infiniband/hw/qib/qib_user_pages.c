@@ -50,7 +50,7 @@ static void __qib_release_user_pages(struct page **p, size_t num_pages,
 }
 
 /*
- * Call with current->mm->mmap_sem held.
+ * Call with current->mm->mmap_lock held.
  */
 static int __qib_get_user_pages(unsigned long start_page, size_t num_pages,
 				struct page **p)

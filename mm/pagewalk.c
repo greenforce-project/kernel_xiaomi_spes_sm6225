@@ -292,7 +292,7 @@ static int __walk_page_range(unsigned long start, unsigned long end,
  *
  * Locking:
  *   Callers of walk_page_range() and walk_page_vma() should hold
- *   @walk->mm->mmap_sem, because these function traverse vma list and/or
+ *   @walk->mm->mmap_lock, because these function traverse vma list and/or
  *   access to vma's data.
  */
 int walk_page_range(unsigned long start, unsigned long end,

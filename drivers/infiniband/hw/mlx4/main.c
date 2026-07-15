@@ -1171,7 +1171,7 @@ static void  mlx4_ib_vma_close(struct vm_area_struct *area)
 	 * file itself is closed, therefore no sync is needed with the regular
 	 * closing flow. (e.g. mlx4_ib_dealloc_ucontext) However need a sync
 	 * with accessing the vma as part of mlx4_ib_disassociate_ucontext.
-	 * The close operation is usually called under mm->mmap_sem except when
+	 * The close operation is usually called under mm->mmap_lock except when
 	 * process is exiting.  The exiting case is handled explicitly as part
 	 * of mlx4_ib_disassociate_ucontext.
 	 */
