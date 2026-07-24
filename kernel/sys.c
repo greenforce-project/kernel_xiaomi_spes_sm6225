@@ -44,7 +44,6 @@
 #include <linux/ctype.h>
 #include <linux/mm.h>
 #include <linux/mempolicy.h>
-#include <linux/string_helpers.h>
 
 #include <linux/compat.h>
 #include <linux/syscalls.h>
@@ -1210,22 +1209,6 @@ DECLARE_RWSEM(uts_sem);
 #define override_architecture(name)	0
 #endif
 
-static void override_custom_release(char __user *release, size_t len)
-{
-	char *buf;
-
-	buf = kstrdup_quotable_cmdline(current, GFP_KERNEL);
-	if (buf == NULL)
-		return;
-
-	if (strstr(buf, "com.google.android.gms")) {
-		copy_to_user(release, "4.19.157-perf+",
-			       strlen("4.19.157-perf+") + 1);
-	}
-
-	kfree(buf);
-}
-
 /*
  * Work around broken programs that cannot handle "Linux 3.0".
  * Instead we map 3.x to 2.6.40+x, so e.g. 3.0 would be 2.6.40
@@ -1267,7 +1250,6 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 	if (copy_to_user(name, &tmp, sizeof(tmp)))
 		return -EFAULT;
 
-	override_custom_release(name->release, sizeof(name->release));
 	if (override_release(name->release, sizeof(name->release)))
 		return -EFAULT;
 	if (override_architecture(name))
