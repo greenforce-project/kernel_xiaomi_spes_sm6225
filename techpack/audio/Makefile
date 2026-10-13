@@ -20,8 +20,13 @@ include $(srctree)/techpack/audio/config/litoauto.conf
 export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/litoauto.conf)
 endif
 ifeq ($(CONFIG_ARCH_BENGAL), y)
+ifeq ($(CONFIG_TARGET_PROJECT_K7T), y)
+include $(srctree)/techpack/audio/config/spesauto.conf
+export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/spesauto.conf)
+else
 include $(srctree)/techpack/audio/config/bengalauto.conf
 export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/bengalauto.conf)
+endif
 endif
 ifeq ($(CONFIG_ARCH_SDM660), y)
 include $(srctree)/techpack/audio/config/sdm660auto.conf
@@ -39,6 +44,10 @@ LINUXINCLUDE    += \
                 -I$(srctree)/techpack/audio/include/uapi \
                 -I$(srctree)/techpack/audio/include
 
+ifeq ($(CONFIG_AUDIO_ELLIPTIC_ULTRASOUND), y)
+LINUXINCLUDE    += \
+                -I$(srctree)/techpack/audio/include/elliptic
+endif
 ifeq ($(CONFIG_ARCH_SDXPOORWILLS), y)
 LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio/config/sdxpoorwillsautoconf.h
@@ -60,8 +69,13 @@ LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio/config/litoautoconf.h
 endif
 ifeq ($(CONFIG_ARCH_BENGAL), y)
+ifeq ($(CONFIG_TARGET_PROJECT_K7T), y)
+LINUXINCLUDE    += \
+		-include $(srctree)/techpack/audio/config/spesautoconf.h
+else
 LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio/config/bengalautoconf.h
+endif
 endif
 ifeq ($(CONFIG_ARCH_SDM660), y)
 LINUXINCLUDE    += \
@@ -71,3 +85,4 @@ obj-y += soc/
 obj-y += dsp/
 obj-y += ipc/
 obj-y += asoc/
+obj-$(CONFIG_AUDIO_ELLIPTIC_ULTRASOUND) += dsp/elliptic
