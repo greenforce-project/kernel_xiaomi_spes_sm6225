@@ -1,3 +1,19 @@
+ifeq ($(CONFIG_TARGET_PROJECT_K7T),y)
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+        dtbo-$(CONFIG_ARCH_KHAJE) += \
+                spes-khaje-idp-nopmi-overlay.dtbo \
+                spesn-khaje-idp-nopmi-overlay.dtbo \
+                spes-sm5602-khaje-idp-nopmi-overlay.dtbo
+
+spes-khaje-idp-nopmi-overlay.dtbo-base := khaje.dtb
+spesn-khaje-idp-nopmi-overlay.dtbo-base := khaje.dtb
+spes-sm5602-khaje-idp-nopmi-overlay.dtbo-base := khaje.dtb
+else
+dtb-$(CONFIG_ARCH_KHAJE) += spes-khaje-idp-nopmi.dtb \
+        spesn-khaje-idp-nopmi.dtb \
+        spes-sm5602-khaje-idp-nopmi.dtb
+endif
+else # CONFIG_TARGET_PROJECT_K7T
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
         dtbo-$(CONFIG_ARCH_KONA) += \
                 kona-cdp-overlay.dtbo \
@@ -149,6 +165,7 @@ endif
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
         dtbo-$(CONFIG_ARCH_BENGAL) += \
                 bengal-rumi-overlay.dtbo \
+                bengal-qrd-overlay.dtbo \
                 bengal-idp-overlay.dtbo \
                 bengal-idp-nopmi-overlay.dtbo \
                 bengal-idp-usbc-overlay.dtbo \
@@ -295,10 +312,7 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		khajeg-idp-nopmi-overlay.dtbo \
 		khajeg-idp-usbc-overlay.dtbo \
 		khajeg-idp-pm8010-overlay.dtbo \
-		khajeg-idps-display-90hz-overlay.dtbo \
-		spes-khaje-idp-nopmi-overlay.dtbo \
-		spesn-khaje-idp-nopmi-overlay.dtbo \
-		spes-sm5602-khaje-idp-nopmi-overlay.dtbo
+		khajeg-idps-display-90hz-overlay.dtbo
 
 khaje-atp-overlay.dtbo-base := khaje.dtb
 khaje-idp-overlay.dtbo-base := khaje.dtb
@@ -340,9 +354,6 @@ khajeg-idp-nopmi-overlay.dtbo-base := khajeg.dtb
 khajeg-idp-pm8010-overlay.dtbo-base := khajeg.dtb
 khajeg-idp-usbc-overlay.dtbo-base := khajeg.dtb
 khajeg-idps-display-90hz-overlay.dtbo-base := khajeg.dtb
-spes-khaje-idp-nopmi-overlay.dtbo-base := khaje.dtb
-spesn-khaje-idp-nopmi-overlay.dtbo-base := khaje.dtb
-spes-sm5602-khaje-idp-nopmi-overlay.dtbo-base := khaje.dtb
 else
 dtb-$(CONFIG_ARCH_KHAJE) += khaje-idp.dtb \
 		khaje-qrd.dtb \
@@ -515,6 +526,7 @@ dtb-$(CONFIG_ARCH_SDM429) += sdm429-mtp.dtb \
 	sda429-mtp.dtb \
 	sda429-cdp.dtb
 endif
+endif # CONFIG_TARGET_PROJECT_K7T
 
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
